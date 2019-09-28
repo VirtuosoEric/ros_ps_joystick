@@ -94,7 +94,7 @@ def tune_speed(button):
 def hat_move(direction):
     global speed_direction,turn_direction
     speed_direction = direction[1]
-    turn_direction = direction[0]
+    turn_direction = -direction[0]
 
 def publisher():
     pub = rospy.Publisher('/cmd_vel', Twist, queue_size=5)
