@@ -3,7 +3,7 @@
 import rospy
 import pygame
 import threading
-
+import os
 from geometry_msgs.msg import Twist
 import sys, select, termios, tty
 
@@ -22,6 +22,7 @@ max_turn = 1.0
 
 
 def start_joystick_loop():
+    os.environ["SDL_VIDEODRIVER"] = "dummy"
     pygame.init()
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
