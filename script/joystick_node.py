@@ -20,8 +20,11 @@ turn_direction = 0
 max_speed = 1.5
 max_turn = 1.0
 
+motor_break = False
+
 
 def start_joystick_loop():
+    global motor_break
     os.environ["SDL_VIDEODRIVER"] = "dummy"
     pygame.init()
     joystick = pygame.joystick.Joystick(0)
@@ -58,9 +61,14 @@ def start_joystick_loop():
             # Possible joystick actions: JOYAXISMOTION JOYBALLMOTION JOYBUTTONDOWN JOYBUTTONUP JOYHATMOTION
             if event.type == pygame.JOYBUTTONDOWN:
                 print "You pressed",event.button
-                tune_speed(event.button)
+                if event.button == 2:
+                    motor_break = True
+                else:
+                    tune_speed(event.button)
             if event.type == pygame.JOYBUTTONUP:
                 print "You released",event.button
+                if event.button == 2:
+                    motor_break = False
             if event.type == pygame.JOYBALLMOTION:
                 print "ball motion"
             if event.type == pygame.JOYAXISMOTION:
@@ -124,6 +132,11 @@ def publisher():
         else:
             control_turn = target_turn
 
+        if motor_break:
+            control_speed = 0
+            control_turn = 0
+            target_speed = 0
+            target_turn = 0
 
         twist = Twist()
         twist.linear.x = control_speed
