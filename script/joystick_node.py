@@ -5,6 +5,7 @@ import pygame
 import threading
 import os
 from geometry_msgs.msg import Twist
+from actionlib_msgs.msg import *
 import sys, select, termios, tty
 
 L1 = 4
@@ -22,9 +23,10 @@ max_turn = 1.0
 
 motor_break = False
 
+pub_cmd = False
+
 
 def start_joystick_loop():
-    global motor_break
     os.environ["SDL_VIDEODRIVER"] = "dummy"
     pygame.init()
     joystick = pygame.joystick.Joystick(0)
@@ -46,13 +48,10 @@ def start_joystick_loop():
 
     for i in range(axes):
         axis = joystick.get_axis(i)
-
     for i in range(buttons) :
         button = joystick.get_button(i)
-
     for i in range(hats):
         hat = joystick.get_hat(i)
-
     for i in range(balls):
         ball = joystick.get_ball(i)
 
@@ -61,22 +60,36 @@ def start_joystick_loop():
             # Possible joystick actions: JOYAXISMOTION JOYBALLMOTION JOYBUTTONDOWN JOYBUTTONUP JOYHATMOTION
             if event.type == pygame.JOYBUTTONDOWN:
                 print "You pressed",event.button
-                if event.button == 2:
-                    motor_break = True
-                else:
-                    tune_speed(event.button)
+                button_pressed(event.button)
             if event.type == pygame.JOYBUTTONUP:
                 print "You released",event.button
-                if event.button == 2:
-                    motor_break = False
+                button_release(event.button)
             if event.type == pygame.JOYBALLMOTION:
                 print "ball motion"
             if event.type == pygame.JOYAXISMOTION:
-                print "axies motion",event.axis, event.value
+                print "axis motion",event.axis, event.value
+                axis_move(event.axis,event.value)
             if event.type == pygame.JOYHATMOTION:
                 print "hat motion",event.hat,event.value
                 hat_move(event.value)
     pygame.quit ()
+
+def button_pressed(button):
+    global motor_break,pub_cmd
+    if button == 2:
+        motor_break = True
+        pub = rospy.Publisher('/move_base/cancel', GoalID, queue_size=1)
+        msg = GoalID()
+        pub.publish(msg)
+    elif button == 9:
+        pub_cmd = not pub_cmd
+    else:
+        tune_speed(button)
+
+def button_release(button):
+    global motor_break
+    if button == 2:
+        motor_break = False
 
 def tune_speed(button):
     global speed,turn
@@ -103,6 +116,15 @@ def hat_move(direction):
     global speed_direction,turn_direction
     speed_direction = direction[1]
     turn_direction = -direction[0]
+
+def axis_move(axis,value):
+    global speed_direction,turn_direction
+    if axis == 1:
+        speed_direction = -value
+    if axis == 0:
+        turn_direction = -value
+    if axis == 2:
+        turn_direction = -value
 
 def publisher():
     pub = rospy.Publisher('/cmd_vel', Twist, queue_size=5)
@@ -141,7 +163,10 @@ def publisher():
         twist = Twist()
         twist.linear.x = control_speed
         twist.angular.z = control_turn
-        pub.publish(twist)
+
+        if pub_cmd:
+            pub.publish(twist)
+
         rate.sleep()
 
 
